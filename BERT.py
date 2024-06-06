@@ -36,7 +36,6 @@ class Embedding(nn.Module):
         super(Embedding, self).__init__()
         self.tok_embed = nn.Embedding(vocab_size, d_model)  # token embedding
         self.pos_embed = nn.Embedding(maxlen, d_model)  # position embedding
-        # self.seg_embed = nn.Embedding(n_segments, d_model)  # segment(token type) embedding
         self.norm = nn.LayerNorm(d_model)
         self.drop = nn.Dropout(0.3)
 
@@ -120,12 +119,6 @@ class BERT(nn.Module):
         self.d_model = d_model
         self.embedding = Embedding(vocab_size)
         self.layers = nn.ModuleList([EncoderLayer() for _ in range(n_layers)])
-        # self.fc = nn.Sequential(
-        #     nn.Linear(d_model, d_model),
-        #     nn.Dropout(0.5),
-        #     nn.Tanh(),
-        # )
-        # self.classifier = nn.Linear(d_model, 2)
         self.linear = nn.Linear(d_model, d_model)
         self.activ2 = nn.GELU()
         # fc2 is shared with embedding layer
@@ -139,10 +132,6 @@ class BERT(nn.Module):
         for layer in self.layers:
             # output: [batch_size, max_len, d_model]
             output = layer(output, enc_self_attn_mask)
-        # it will be decided by first token(CLS)
-        # h_pooled = self.fc(output[:, 0]) # [batch_size, d_model]
-        # logits_clsf = self.classifier(h_pooled) # [batch_size, 2] predict isNext
-
         masked_pos = masked_pos[:, :, None].expand(-1, -1, self.d_model) # [batch_size, max_pred, d_model]
         h_masked = torch.gather(output, 1, masked_pos) # masking position [batch_size, max_pred, d_model]
         h_masked = self.activ2(self.linear(h_masked)) # [batch_size, max_pred, d_model]
